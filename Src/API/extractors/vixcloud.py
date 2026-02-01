@@ -12,6 +12,7 @@ from Src.Utilities.config import setup_logging
 level = config.LEVEL
 logger = setup_logging(level)
 SC_DOMAIN = config.SC_DOMAIN
+VIX_MULTI_QUALITY = config.VIX_MULTI_QUALITY
 User_Agent= "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
 
 
@@ -55,56 +56,57 @@ async def vixcloud(link,client,MFP,MFP_CREDENTIALS,streams,site_name,proxies,For
         first_part_final_url = parts_final_url[0] + ".m3u8"
         final_url = first_part_final_url + "?" + parts_final_url[1]
         
-        try:
-            # Fetch the master playlist to extract qualities
-            response_m3u8 = await client.get(final_url, headers=headers)
-            if response_m3u8.status_code == 200:
-                master_playlist_content = response_m3u8.text
-                lines = master_playlist_content.splitlines()
-                
-                found_quality = False
-                # First pass: identify available qualities
-                available_qualities = []
-                # We can reuse the looping logic or just regex search the content first
-                # Regex is safer for finding all RESOLUTIONs
-                matches = re.findall(r'#EXT-X-STREAM-INF:.*RESOLUTION=(\d+x\d+).*', master_playlist_content)
-                
-                # Map resolutions to names
-                unique_resolutions = sorted(list(set(matches)), key=lambda x: int(x.split('x')[1]), reverse=True)
-                
-                for res in unique_resolutions:
-                    if "1920x1080" in res:
-                        q_name = "1080p"
-                    elif "1280x720" in res:
-                        q_name = "720p"
-                    elif "854x480" in res:
-                        q_name = "480p"
-                    else:
-                        q_name = res
+        if VIX_MULTI_QUALITY == "1":
+            try:
+                # Fetch the master playlist to extract qualities
+                response_m3u8 = await client.get(final_url, headers=headers)
+                if response_m3u8.status_code == 200:
+                    master_playlist_content = response_m3u8.text
+                    lines = master_playlist_content.splitlines()
                     
-                    # Generate Proxy URL
-                    # We assume final_url is the master playlist URL
-                    # instance_url must be passed to this function
-                    import urllib.parse
-                    encoded_url = urllib.parse.quote(final_url)
-                    proxy_url = f"{instance_url}/vixcloud/playlist?url={encoded_url}&quality={res}"
+                    found_quality = False
+                    # First pass: identify available qualities
+                    available_qualities = []
+                    # We can reuse the looping logic or just regex search the content first
+                    # Regex is safer for finding all RESOLUTIONs
+                    matches = re.findall(r'#EXT-X-STREAM-INF:.*RESOLUTION=(\d+x\d+).*', master_playlist_content)
                     
-                    streams['streams'].append({
-                        "name": f"{Name}",
-                        "title": f"{Icon} StreamingCommunity\n▶️ Vixcloud {q_name}",
-                        "url": proxy_url,
-                        "behaviorHints": {
-                            "proxyHeaders": {"request": {"user-agent": User_Agent}},
-                            "notWebReady": True,
-                            "bingeGroup": f"{site_name.lower()}-{q_name}"
-                        }
-                    })
-                    found_quality = True
-                
-                if found_quality:
-                    return streams
-        except Exception as e:
-            logger.error(f"Error parsing Vixcloud M3U8: {e}")
+                    # Map resolutions to names
+                    unique_resolutions = sorted(list(set(matches)), key=lambda x: int(x.split('x')[1]), reverse=True)
+                    
+                    for res in unique_resolutions:
+                        if "1920x1080" in res:
+                            q_name = "1080p"
+                        elif "1280x720" in res:
+                            q_name = "720p"
+                        elif "854x480" in res:
+                            q_name = "480p"
+                        else:
+                            q_name = res
+                        
+                        # Generate Proxy URL
+                        # We assume final_url is the master playlist URL
+                        # instance_url must be passed to this function
+                        import urllib.parse
+                        encoded_url = urllib.parse.quote(final_url)
+                        proxy_url = f"{instance_url}/vixcloud/playlist?url={encoded_url}&quality={res}"
+                        
+                        streams['streams'].append({
+                            "name": f"{Name} \n{q_name}",
+                            "title": f"{Icon} StreamingCommunity\n▶️ Vixcloud {q_name}",
+                            "url": proxy_url,
+                            "behaviorHints": {
+                                "proxyHeaders": {"request": {"user-agent": User_Agent}},
+                                "notWebReady": True,
+                                "bingeGroup": f"{site_name.lower()}-{q_name}"
+                            }
+                        })
+                        found_quality = True
+                    
+                    if found_quality:
+                        return streams
+            except Exception as e:
+                logger.error(f"Error parsing Vixcloud M3U8: {e}")
 
         streams['streams'].append({"name":f'{Name} {mfp_icon}\n{quality}', 'title': f'{Icon} StreamingCommunity\n▶️ Vixcloud','url': final_url,'behaviorHints': {'proxyHeaders': {"request": {"user-agent": User_Agent}}, 'notWebReady': True, 'bingeGroup': f'{site_name.lower()}{quality}'}})
 

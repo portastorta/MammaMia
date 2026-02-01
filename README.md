@@ -290,6 +290,7 @@ Down here all explained:
 |**_ForwardProxy| Whether or not to use the ForwardProxy for the specific site.|
 |**_Proxy| Whether or not to use the Proxies for the specific site.|
 |load_env|It needs to be enabled if you need to load a .env file. On remote hosting services, like Hugging Face or Render, it needs to be disabled. |
+|VIX_MULTI_QUALITY| "1" enables 1080p/720p/480p streams (requires valid HTTPS/Host config). "0" is legacy mode (single stream). |
 |HOST| The host for the Fast API APP|
 |PORT| The port for the Fast API APP. Default: 8080 
 |level| The level for the logging module. Default: info
