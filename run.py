@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException,Request, Form,Cookie
-from fastapi.responses import JSONResponse,RedirectResponse,HTMLResponse
+from fastapi.responses import JSONResponse,RedirectResponse,HTMLResponse,Response
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.middleware import SlowAPIMiddleware
@@ -242,6 +242,9 @@ async def addon_meta(request: Request,id: str):
 @app.get('/{config:path}/stream/{type}/{id}.json')
 @limiter.limit("5/second")
 async def addon_stream(request: Request,config, type, id,):
+    forwarded_proto = request.headers.get("x-forwarded-proto")
+    scheme = forwarded_proto if forwarded_proto else request.url.scheme
+    instance_url = f"{scheme}://{request.url.netloc}"
     if type not in MANIFEST['types']:
         raise HTTPException(status_code=404)
     streams = {'streams': []}
@@ -302,7 +305,7 @@ async def addon_stream(request: Request,config, type, id,):
                         SC_MFP = "1"
                     else:
                         SC_MFP = '0'
-                    streams = await streaming_community(streams,id,client,SC_MFP,MFP_CREDENTIALS)
+                    streams = await streaming_community(streams,id,client,SC_MFP,MFP_CREDENTIALS,instance_url)
                 if provider_maps['CB01'] == "1" and CB == "1":
                     streams = await cb01(streams,id,MFP,MFP_CREDENTIALS,client)
                 if provider_maps['GUARDASERIE'] == "1" and GS == "1":
@@ -345,6 +348,65 @@ async def execute_uprot(request: Request,user_input = Form(...),PHPSESSID: str =
         return static.TemplateResponse('uprot.html',{'request':request,"image_url": 'https://tinyurl.com/doneokdone'})
     elif status == False:
         return static.TemplateResponse('uprot.html',{'request':request,"image_url": 'https://tinyurl.com/tryagaindumb'})
+
+@app.get('/vixcloud/playlist')
+async def vixcloud_playlist(url: str, quality: str):
+    # Retrieve the content
+    import re
+    # Decode URL if needed, but fastapi handles query params decoding
+    final_url = url 
+    
+    headers = {
+        'User-Agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+        'Referer': f"{SC_DOMAIN}/",
+        'Origin': SC_DOMAIN
+    }
+    
+    try:
+        async with AsyncSession(proxies=proxies) as client:
+            response = await client.get(final_url, headers=headers)
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail="Failed to fetch playlist")
+            
+            content = response.text
+            
+            # Filter playlist
+            filtered_lines = []
+            if not content.startswith("#EXTM3U"):
+                filtered_lines.append("#EXTM3U")
+            
+            iter_lines = iter(content.splitlines())
+            for line in iter_lines:
+                if line.startswith("#EXTM3U"):
+                    filtered_lines.append(line)
+                    continue
+                if line.startswith("#EXT-X-MEDIA"):
+                    filtered_lines.append(line)
+                    continue
+                if line.startswith("#EXT-X-STREAM-INF"):
+                    if f"RESOLUTION={quality}" in line:
+                        filtered_lines.append(line)
+                        try:
+                            next_line = next(iter_lines)
+                            filtered_lines.append(next_line)
+                        except StopIteration:
+                            break
+                    else:
+                        try:
+                            next(iter_lines)
+                        except StopIteration:
+                            break
+                    continue
+                if line.startswith("#") and not line.startswith("#EXT"):
+                        filtered_lines.append(line)
+            
+            new_playlist = "\n".join(filtered_lines)
+            return Response(content=new_playlist, media_type="application/vnd.apple.mpegurl")
+            
+    except Exception as e:
+        logger.error(f"Proxy invalid: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == '__main__':
     import uvicorn

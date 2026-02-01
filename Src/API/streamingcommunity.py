@@ -53,7 +53,7 @@ else:
     ForwardProxy = ""
 #Get domain
 SC_DOMAIN = config.SC_DOMAIN
-async def vixsrc(streams,id,client,MFP,MFP_CREDENTIALS):
+async def vixsrc(streams,id,client,MFP,MFP_CREDENTIALS,instance_url):
     general = await is_movie(id)
     ismovie = general[0]
     clean_id = general[1]
@@ -67,14 +67,14 @@ async def vixsrc(streams,id,client,MFP,MFP_CREDENTIALS):
         site_url = f'{SC_DOMAIN}/tv/{tmdb_id}/{general[2]}/{general[3]}/'
     else:
         site_url = f'{SC_DOMAIN}/movie/{tmdb_id}/' 
-    streams = await vixcloud(site_url,client,MFP,MFP_CREDENTIALS,streams,"Vixcloud",proxies,ForwardProxy)
+    streams = await vixcloud(site_url,client,MFP,MFP_CREDENTIALS,streams,"Vixcloud",proxies,ForwardProxy,instance_url)
     return streams
 
 
-async def streaming_community(streams,id,client,MFP,MFP_CREDENTIALS):
+async def streaming_community(streams,id,client,MFP,MFP_CREDENTIALS,instance_url):
     try:
         if "vixsrc" in SC_DOMAIN:
-            streams = await vixsrc(streams,id,client,MFP,MFP_CREDENTIALS)
+            streams = await vixsrc(streams,id,client,MFP,MFP_CREDENTIALS,instance_url)
         return streams
     except Exception as e:
         logger.warning(f"StreamingCommunity failed {e}")
@@ -87,7 +87,7 @@ async def test_vixsrc():
     async with AsyncSession() as client:
         # Replace with actual id, for example 'anime_id:episode' format
         test_id = "tt6468322:1:1"  # This is an example ID format
-        results = await streaming_community({'streams': []},test_id, client,"0",['test','welp'])
+        results = await streaming_community({'streams': []},test_id, client,"0",['test','welp'], "http://localhost:8000")
         print(results)
 
 if __name__ == "__main__":
