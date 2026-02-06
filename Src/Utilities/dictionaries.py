@@ -444,6 +444,7 @@ extra_sources = {
 provider_map = {
         'SC': 'STREAMINGCOMMUNITY',
         'SC_MFP': 'SC_MFP',
+        'SCMQ': 'SCMQ',
         'LC': 'LORDCHANNEL',
         'TF_FS': 'TF_FAST_SEARCH',
         'TF': 'TANTIFILM',  # Assuming 'TF' should also be handled

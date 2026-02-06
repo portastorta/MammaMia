@@ -53,7 +53,7 @@ else:
     ForwardProxy = ""
 #Get domain
 SC_DOMAIN = config.SC_DOMAIN
-async def vixsrc(streams,id,client,MFP,MFP_CREDENTIALS,instance_url):
+async def vixsrc(streams,id,client,MFP,MFP_CREDENTIALS,instance_url,SCMQ="0"):
     general = await is_movie(id)
     ismovie = general[0]
     clean_id = general[1]
@@ -67,14 +67,14 @@ async def vixsrc(streams,id,client,MFP,MFP_CREDENTIALS,instance_url):
         site_url = f'{SC_DOMAIN}/tv/{tmdb_id}/{general[2]}/{general[3]}/'
     else:
         site_url = f'{SC_DOMAIN}/movie/{tmdb_id}/' 
-    streams = await vixcloud(site_url,client,MFP,MFP_CREDENTIALS,streams,"Vixcloud",proxies,ForwardProxy,instance_url)
+    streams = await vixcloud(site_url,client,MFP,MFP_CREDENTIALS,streams,"Vixcloud",proxies,ForwardProxy,instance_url,SCMQ)
     return streams
 
 
-async def streaming_community(streams,id,client,MFP,MFP_CREDENTIALS,instance_url):
+async def streaming_community(streams,id,client,MFP,MFP_CREDENTIALS,instance_url,SCMQ="0"):
     try:
         if "vixsrc" in SC_DOMAIN:
-            streams = await vixsrc(streams,id,client,MFP,MFP_CREDENTIALS,instance_url)
+            streams = await vixsrc(streams,id,client,MFP,MFP_CREDENTIALS,instance_url,SCMQ)
         return streams
     except Exception as e:
         logger.warning(f"StreamingCommunity failed {e}")

@@ -46,7 +46,6 @@ GH_PROXY = SITE['GuardaHD']["GH_PROXY"]
 CB_PROXY = SITE['CB01']["CB_PROXY"]
 SC_PROXY = SITE['StreamingCommunity']["SC_PROXY"]
 VX_PROXY = SITE['StreamingCommunity']["VX_PROXY"]
-VIX_MULTI_QUALITY = SITE['StreamingCommunity'].get("VIX_MULTI_QUALITY", "0")
 AW_PROXY = SITE['AnimeWorld']["AW_PROXY"]
 MX_PROXY = SITE['CB01']["MX_PROXY"]
 ES_PROXY = SITE['Eurostreaming']['ES_PROXY']

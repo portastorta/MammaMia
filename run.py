@@ -21,6 +21,7 @@ from Src.API.realtime import realtime as streams_realtime
 from Src.Utilities.dictionaries import STREAM,extra_sources,provider_map
 from Src.API.epg import tivu, tivu_get,epg_guide,convert_bho_1,convert_bho_2,convert_bho_3
 from Src.API.extractors.uprot import get_uprot_numbers,generate_uprot_txt
+from Src.Utilities.vix_playlist import fetch_and_filter_playlist
 import logging
 from urllib.parse import unquote
 from curl_cffi.requests import AsyncSession
@@ -305,7 +306,8 @@ async def addon_stream(request: Request,config, type, id,):
                         SC_MFP = "1"
                     else:
                         SC_MFP = '0'
-                    streams = await streaming_community(streams,id,client,SC_MFP,MFP_CREDENTIALS,instance_url)
+                    SCMQ = "1" if provider_maps.get('SCMQ', '0') != "0" else "0"
+                    streams = await streaming_community(streams,id,client,SC_MFP,MFP_CREDENTIALS,instance_url,SCMQ)
                 if provider_maps['CB01'] == "1" and CB == "1":
                     streams = await cb01(streams,id,MFP,MFP_CREDENTIALS,client)
                 if provider_maps['GUARDASERIE'] == "1" and GS == "1":
@@ -351,61 +353,7 @@ async def execute_uprot(request: Request,user_input = Form(...),PHPSESSID: str =
 
 @app.get('/vixcloud/playlist')
 async def vixcloud_playlist(url: str, quality: str):
-    # Retrieve the content
-    import re
-    # Decode URL if needed, but fastapi handles query params decoding
-    final_url = url 
-    
-    headers = {
-        'User-Agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-        'Referer': f"{SC_DOMAIN}/",
-        'Origin': SC_DOMAIN
-    }
-    
-    try:
-        async with AsyncSession(proxies=proxies) as client:
-            response = await client.get(final_url, headers=headers)
-            if response.status_code != 200:
-                raise HTTPException(status_code=response.status_code, detail="Failed to fetch playlist")
-            
-            content = response.text
-            
-            # Filter playlist
-            filtered_lines = []
-            if not content.startswith("#EXTM3U"):
-                filtered_lines.append("#EXTM3U")
-            
-            iter_lines = iter(content.splitlines())
-            for line in iter_lines:
-                if line.startswith("#EXTM3U"):
-                    filtered_lines.append(line)
-                    continue
-                if line.startswith("#EXT-X-MEDIA"):
-                    filtered_lines.append(line)
-                    continue
-                if line.startswith("#EXT-X-STREAM-INF"):
-                    if f"RESOLUTION={quality}" in line:
-                        filtered_lines.append(line)
-                        try:
-                            next_line = next(iter_lines)
-                            filtered_lines.append(next_line)
-                        except StopIteration:
-                            break
-                    else:
-                        try:
-                            next(iter_lines)
-                        except StopIteration:
-                            break
-                    continue
-                if line.startswith("#") and not line.startswith("#EXT"):
-                        filtered_lines.append(line)
-            
-            new_playlist = "\n".join(filtered_lines)
-            return Response(content=new_playlist, media_type="application/vnd.apple.mpegurl")
-            
-    except Exception as e:
-        logger.error(f"Proxy invalid: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await fetch_and_filter_playlist(url, quality, proxies)
 
 
 if __name__ == '__main__':

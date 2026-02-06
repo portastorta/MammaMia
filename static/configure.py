@@ -185,6 +185,7 @@ CONFIGURE = """
             <h2>This addon provides Movie, Series, Anime, and Live TV HTTPS Streams.<br> https://github.com/UrloMythus/MammaMia/</h2>
         </div>
         <p class="description">🕵️‍♂️ = Mediaflowproxy might be needed <br>Select the box with this icon if you want to enable MFP for that source<br></p>
+        <p class="description">📶 = Allows you to select the quality of the stream<br>Select the box with this icon if you want to enable multi quality for that source (1080p, 720p, 480p, if available)<br></p>
         <h3 class="gives">Select Providers:</h3>
         <form class="pure-form" id="provider-form">
              <div class="provider-group">
@@ -223,6 +224,7 @@ CONFIGURE = """
                 <label for="streamingcommunity" class="provider-label">
                     <input type="checkbox" id="streamingcommunity"> StreamingCommunity 🕵️‍♂️
                     <input type="checkbox" id="streamingcommunity_mfp" checked> 🕵️‍♂️
+                    <input type="checkbox" id="streamingcommunity_multi_quality" checked> 📶
                 </label>
             </div>
              <div class="provider-group">
@@ -307,6 +309,10 @@ CONFIGURE = """
                     manifest += providers[id] + "|";
                 }
             }
+        }
+        // Handle streamingcommunity Multi-Quality Checkbox
+        if (document.getElementById("streamingcommunity_multi_quality").checked) {
+            manifest += "SCMQ|";
         }
         const encodedProviders = btoa(manifest);
         const instanceUrl = "{instance_url}"; // Replace with your instance URL
